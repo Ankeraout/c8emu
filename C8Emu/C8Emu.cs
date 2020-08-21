@@ -32,23 +32,81 @@ namespace C8Emu
             dstRect.w = 256;
             dstRect.h = 128;
 
-            SDL.SDL_BlitScaled((IntPtr)screenSurface, ref srcRect, (IntPtr)windowSurface, ref dstRect);
-            SDL.SDL_UpdateWindowSurface(emulatorWindow);
-
-            Console.SetCursorPosition(0, 0);
-
             for(int y = 0; y < 32; y++) {
                 for(int x = 0; x < 64; x++) {
-                    int index = y * 64 + x;
-
-                    if(data[index]) {
-                        Console.Write('#');
-                    } else {
-                        Console.Write(' ');
-                    }
+                    ((uint *)screenSurface->pixels)[y * 64 + x] = data[y * 64 + x] ? 0xffffffff : 0x000000ff;
                 }
+            }
 
-                Console.WriteLine();
+            SDL.SDL_BlitScaled((IntPtr)screenSurface, ref srcRect, (IntPtr)windowSurface, ref dstRect);
+            SDL.SDL_UpdateWindowSurface(emulatorWindow);
+        }
+
+        static void HandleKeyEvent(SDL.SDL_Keycode keyCode, Chip8 core, bool pressed) {
+            switch(keyCode) {
+                case SDL.SDL_Keycode.SDLK_1:
+                    core.SetKey(1, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_2:
+                    core.SetKey(2, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_3:
+                    core.SetKey(3, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_4:
+                    core.SetKey(12, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_a:
+                    core.SetKey(4, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_z:
+                    core.SetKey(5, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_e:
+                    core.SetKey(6, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_r:
+                    core.SetKey(13, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_q:
+                    core.SetKey(7, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_s:
+                    core.SetKey(8, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_d:
+                    core.SetKey(9, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_f:
+                    core.SetKey(14, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_w:
+                    core.SetKey(10, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_x:
+                    core.SetKey(0, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_c:
+                    core.SetKey(11, pressed);
+                    break;
+                
+                case SDL.SDL_Keycode.SDLK_v:
+                    core.SetKey(15, pressed);
+                    break;
             }
         }
 
@@ -89,10 +147,34 @@ namespace C8Emu
 
             core.DisplayUpdate += DisplayUpdate;
 
-            Console.Clear();
+            //Console.Clear();
 
             while(true) {
                 core.FrameAdvance();
+
+                SDL.SDL_Event e;
+                while(SDL.SDL_PollEvent(out e) != 0) {
+                    switch(e.type) {
+                        case SDL.SDL_EventType.SDL_WINDOWEVENT:
+                            if(e.window.windowEvent == SDL.SDL_WindowEventID.SDL_WINDOWEVENT_CLOSE) {
+                                SDL.SDL_FreeSurface((IntPtr)screenSurface);
+                                SDL.SDL_DestroyWindow(emulatorWindow);
+                                SDL.SDL_Quit();
+                                return;
+                            }
+
+                            break;
+
+                        case SDL.SDL_EventType.SDL_KEYDOWN:
+                            HandleKeyEvent(e.key.keysym.sym, core, true);
+                            break;
+
+                        case SDL.SDL_EventType.SDL_KEYUP:
+                            HandleKeyEvent(e.key.keysym.sym, core, false);
+                            break;
+                    }
+                }
+
                 SDL.SDL_Delay(16);
             }
         }

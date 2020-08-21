@@ -79,8 +79,20 @@ namespace C8Emu {
             }
         }
 
+        public void SetKey(int index, bool pressed) {
+            this.keypad[index % 16] = pressed;
+        }
+
         public void UpdateDisplay() {
             this.DisplayUpdate(this.vram);
+            
+            if(this.regST > 0) {
+                this.regST--;
+            }
+
+            if(this.regDT > 0) {
+                this.regDT--;
+            }
         }
 
         public void LoadROM(byte[] buffer) {
@@ -293,13 +305,12 @@ namespace C8Emu {
                     int pixelX = (this.regV[x] + j) % 64;
                     bool pixelValue = ((spriteLine >> (7 - j)) & 0x01) == 1;
                     int vramIndex = pixelY * 64 + pixelX;
-                    bool oldPixelValue = this.vram[vramIndex];
                     
-                    if(pixelValue && oldPixelValue) {
+                    if(pixelValue && this.vram[vramIndex]) {
                         this.regV[0xf] = 1;
                     }
 
-                    this.vram[vramIndex] = pixelValue ^ oldPixelValue;
+                    this.vram[vramIndex] ^= pixelValue;
                 }
             }
         }
