@@ -15,6 +15,9 @@ namespace C8Emu {
         private Random random;
         private int frameStepCounter;
 
+        public delegate void OnDisplayUpdate(bool[] displayData);
+        public event OnDisplayUpdate DisplayUpdate;
+
         public Chip8() {
             this.regV = new byte[16];
             this.keypad = new bool[16];
@@ -26,7 +29,7 @@ namespace C8Emu {
         }
 
         public void Reset() {
-            this.regPC = 0;
+            this.regPC = 0x200;
             this.regDT = 0;
             this.regST = 0;
             this.stack.Clear();
@@ -77,12 +80,63 @@ namespace C8Emu {
         }
 
         public void UpdateDisplay() {
+            this.DisplayUpdate(this.vram);
+        }
 
+        public void LoadROM(byte[] buffer) {
+            if(buffer.Length > 3232) {
+                throw new Exception("ROM file is too big.");
+            }
+
+            buffer.CopyTo(this.ram, 512);
         }
 
         public void Cycle() {
             ushort opcode = this.Fetch();
-            this.Execute(opcode);
+
+            try {
+                this.Execute(opcode);
+            } catch(Exception e) {
+                Console.WriteLine("Core state:");
+                Console.WriteLine(
+                    String.Format(
+                        "V0={0:X2} V1={1:X2} V2={2:X2} V3={3:X2} V4={4:X2} V5={5:X2} V6={6:X2} V7={7:X3}",
+                        this.regV[0],
+                        this.regV[1],
+                        this.regV[2],
+                        this.regV[3],
+                        this.regV[4],
+                        this.regV[5],
+                        this.regV[6],
+                        this.regV[7]
+                    )
+                );
+                Console.WriteLine(
+                    String.Format(
+                        "V8={0:X2} V9={1:X2} VA={2:X2} VB={3:X2} VC={4:X2} VD={5:X2} VE={6:X2} VF={7:X3}",
+                        this.regV[8],
+                        this.regV[9],
+                        this.regV[10],
+                        this.regV[11],
+                        this.regV[12],
+                        this.regV[13],
+                        this.regV[14],
+                        this.regV[15]
+                    )
+                );
+                Console.WriteLine(
+                    String.Format(
+                        "I={0:X3} DT={1:X2} ST={2:X2} PC={3:X3}",
+                        this.regI,
+                        this.regDT,
+                        this.regST,
+                        this.regPC
+                    )
+                );
+
+                throw e;
+            }
+
             this.frameStepCounter++;
 
             if(this.frameStepCounter == 15) {
@@ -161,7 +215,7 @@ namespace C8Emu {
         }
 
         private void OpcodeUND(int opcode) {
-            throw new Exception(String.Format("Unknown opcode 0x%04X", opcode));
+            throw new Exception(String.Format("Unknown opcode {0:X4}", opcode));
         }
         
         private void OpcodeLD_Vx_Vy(int x, int y) {
