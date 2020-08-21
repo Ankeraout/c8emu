@@ -221,9 +221,7 @@ namespace C8Emu {
         }
 
         private void OpcodeADD_Vx_nn(int x, int nn) {
-            bool carry = (this.regV[x] + nn >= 0x100);
             this.regV[x] += (byte)nn;
-            this.regV[0xf] = (byte)(carry ? 1 : 0);
         }
 
         private void OpcodeUND(int opcode) {
@@ -253,7 +251,7 @@ namespace C8Emu {
         }
 
         private void OpcodeSUB(int x, int y) {
-            bool borrow = y > x;
+            bool borrow = this.regV[y] > this.regV[x];
             this.regV[x] -= this.regV[y];
             this.regV[0xf] = (byte)(borrow ? 0 : 1);
         }
@@ -265,7 +263,7 @@ namespace C8Emu {
         }
 
         private void OpcodeSUBR(int x, int y) {
-            bool borrow = x > y;
+            bool borrow = this.regV[x] > this.regV[y];
             this.regV[x] = (byte)(this.regV[y] - this.regV[x]);
             this.regV[0xf] = (byte)(borrow ? 0 : 1);
         }
@@ -286,8 +284,8 @@ namespace C8Emu {
             this.regI = (ushort)nnn;
         }
 
-        private void OpcodeJMP_I_nnn(int nnn) {
-            this.regPC = (ushort)(this.regI + nnn);
+        private void OpcodeJMP_V0_nnn(int nnn) {
+            this.regPC = (ushort)(this.regV[0] + nnn);
         }
 
         private void OpcodeRND(int x, int nn) {
@@ -360,7 +358,7 @@ namespace C8Emu {
         }
 
         private void OpcodeFNT(int x) {
-            this.regI = (ushort)(x * 5);
+            this.regI = (ushort)(this.regV[x] * 5);
         }
 
         private void OpcodeBCD(int x) {
@@ -373,12 +371,16 @@ namespace C8Emu {
             for(int i = 0; i <= x; i++) {
                 this.WriteByte(this.regI + i, this.regV[i]);
             }
+
+            this.regI += (ushort)(x + 1);
         }
 
         private void opcodeLDM(int x) {
             for(int i = 0; i <= x; i++) {
                 this.regV[i] = this.ReadByte(this.regI + i);
             }
+
+            this.regI += (ushort)(x + 1);
         }
 
         private void Execute(ushort opcode) {
@@ -497,7 +499,7 @@ namespace C8Emu {
                     break;
                     
                 case 0xb:
-                    this.OpcodeJMP_I_nnn(nnn);
+                    this.OpcodeJMP_V0_nnn(nnn);
                     break;
                     
                 case 0xc:
