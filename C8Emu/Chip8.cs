@@ -13,6 +13,7 @@ namespace C8Emu {
         private bool[] vram;
         private byte[] ram;
         private Random random;
+        private int frameStepCounter;
 
         public Chip8() {
             this.regV = new byte[16];
@@ -30,6 +31,7 @@ namespace C8Emu {
             this.regST = 0;
             this.stack.Clear();
             this.regI = 0;
+            this.frameStepCounter = 0;
 
             for(int i = 0; i < 16; i++) {
                 this.regV[i] = 0;
@@ -69,11 +71,24 @@ namespace C8Emu {
         }
 
         public void FrameAdvance() {
+            for(int i = this.frameStepCounter; i < 15; i++) {
+                this.Cycle();
+            }
+        }
+
+        public void UpdateDisplay() {
 
         }
 
         public void Cycle() {
+            ushort opcode = this.Fetch();
+            this.Execute(opcode);
+            this.frameStepCounter++;
 
+            if(this.frameStepCounter == 15) {
+                this.frameStepCounter = 0;
+                this.UpdateDisplay();
+            }
         }
 
         private byte ReadByte(int address) {
@@ -214,7 +229,25 @@ namespace C8Emu {
         }
 
         private void OpcodeDRW(int x, int y, int n) {
+            this.regV[0xf] = 0;
 
+            for(int i = 0; i < n; i++) {
+                int pixelY = (this.regV[y] + i) % 32;
+                byte spriteLine = this.ReadByte(this.regI + i);
+
+                for(int j = 0; j < 8; j++) {
+                    int pixelX = (this.regV[x] + j) % 64;
+                    bool pixelValue = ((spriteLine >> (7 - j)) & 0x01) == 1;
+                    int vramIndex = pixelY * 64 + pixelX;
+                    bool oldPixelValue = this.vram[vramIndex];
+                    
+                    if(pixelValue && oldPixelValue) {
+                        this.regV[0xf] = 1;
+                    }
+
+                    this.vram[vramIndex] = pixelValue ^ oldPixelValue;
+                }
+            }
         }
 
         private void OpcodeSKP(int x) {
